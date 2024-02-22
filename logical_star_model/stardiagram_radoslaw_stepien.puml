@@ -11,23 +11,24 @@ class {
 class "**TreasureFound_Fact**" as TreasureFound_Fact {
   **KEY SCD ATTRIBUTE**
   FK\t\tTreasureID
-  FK\t\tLogID
-  FK\t\tUserID 
-  //\t\tStartTime//
-  //\t\tEndTime//
-  //\t\tWeather//
+  FK\t\tDateID
+  FK\t\tUserSK 
+  //\t\tTotalCachesFound//
+  //\t\tDescriptionLength//
+  //\t\tSearchTime//
+  //\t\tRainfall//
 }
 
-note top of TreasureFound_Fact
+note right of TreasureFound_Fact
 Main TreasureFound Fact
 Attributes:
 TreasureID -> Foreign key to Treasure_Dim
 LogID -> Foreign key to Log_Dim
-UserID -> Foreign key to User_Dim
-StartTime -> Time that the user started looking for the treasure 
-EndTime -> Time when the user ended the search
-(both for these attributes are used to find out how long does the search last)
-Weather -> Enum [0-> Sunny, 1-> Rainy etc.]
+UserSK -> Foreign key to User_Dim
+SearchTime -> Time spent searching for the treasure
+TotalCachesFound -> Total amount of caches found
+DescriptionLength -> Length of the description for the treasure
+Rainfall -> Amount of rain in mm/m2 when the treasure was found
 end note
 
 class "**Treasure_Dim**" as Treasure_Dim {
@@ -35,8 +36,9 @@ class "**Treasure_Dim**" as Treasure_Dim {
   PK\t0\tTreasureID
   \t0\tTerrain
   \t0\tDifficulty
-  FK\t0\tCityID
+  \t0\tCity
   \t0\tCountryCode
+  \t0\tContainerSize 
 }
 
 note left of Treasure_Dim 
@@ -45,84 +47,55 @@ Attributes:
 TreasureID -> Primary key
 Terrain -> Enum describing the terrain type [0-> Flat, 1-> Hills etc.]
 Difficulty -> Enum describing the dificulty [0-> Easy, 1-> Medium etc.] 
-CityID -> Foreign key to CityID
+City -> City
 CountryCode -> Code of the country that the treasure is located in
-end note
-
-class "**Log_Dim**" as Log_Dim {
-  **KEY SCD ATTRIBUTE**
-  PK\t0\tLogID
-  \t0\tType
-  \t0\tDescription 
-  \t1\tStartTime
-}
-
-note right of Log_Dim
-Log Dimension
-Attributes:
-LogID -> Primary key
-Type -> Enum [0-> General message, 1-> Found, 2-> Not found]
-Description -> Contents of the log
-Datetime -> Time when the log was recorded
+ContainerSize -> Size of the container
 end note
 
 class "**User_Dim**" as User_Dim {
   **KEY SCD ATTRIBUTE**
-  PK\t0\tUserID
-  \t2\tSurrogateID
-  \t2\tFirstname
-  \t2\tLastname
-  \t2\tStreet
-  \t2\tNumber
-  FK\t2\tCityID
-  \t2\tEmail
+  PK\t2\tUserSK
+  \t0\tUserID
+  \t2\tCity
   //\t2\tDedicator//
-  //\t2\tExperienceLevel//
-  //\t2\tscd_begin//
-  //\t2\tscd_end//
-  //\t2\tscd_flag//
+  //\t2\tExperienceLevel// 
 }
 
 note right of User_Dim
 User Dimension
 Attributes:
-UserID -> Primary key
-SurrogateID -> Surrogate key used for SCD versioning
-Firstname -> First name of the user
-Lastname -> Last name of the user
-...other contact info
+UserSK -> Surrogate key
+UserID -> ID of the user
+City -> Home city of the user
 Dedicator (new) -> Is user a dedicator or not?
 ExperienceLevel (new) ->
   Enum [0-> Starter, 1-> Amateur, 2-> Professional, 3-> Pirate]
-SCD_* fields (new) -> used for SCD versioning
 end note
 
-class "**Stage_Dim**" as Stage_Dim {
+class "**Date_Dim**" as Date_Dim {
   **KEY SCD ATTRIBUTE**
-  PK\t0\tStageID
-  \t0\tSequenceNumber
-  \t0\tType
-  \t0\tDescription
-  \t0\tLongitude
-  \t0\tLatitude
-  \t0\tVisibility
-  \t0\tSize
+  PK\t0\tDateID
+  \t0\tDate
+  //\t1\tDayofTheWeek//
+  //\t1\tWeek//
+  //\t1\tMonth//
+  //\t1\tSeason//
 }
 
-note left of Stage_Dim
-Stage Dimension
+note left of Date_Dim
+Date Dimension
 Attributes:
-StageID -> Primary key
-SequenceNumber -> Ordering of the stage in the sequence before treasure
-Type -> Virtual/Physical
-Description -> Stage description
-Size -> Enum [0-> NANO, 1-> MICRO, 2-> REGULAR, 3-> HUGE]
+DateSK -> Surrogate key
+Date -> Complete date
+DayofTheWeek -> Monday, Tuesday etc.
+Week -> Week of the year
+Month -> January, February etc.
+Season -> Winter, Spring etc.
 end note
 
 TreasureFound_Fact -up-> Treasure_Dim : "*" "1"
-TreasureFound_Fact -right-> Log_Dim : "1" "0..1"
 TreasureFound_Fact -down-> User_Dim : "*" "1"
-TreasureFound_Fact -left-> Stage_Dim : "*" "*"
+TreasureFound_Fact -left-> Date_Dim : "1" "*"
 
 legend left
 //Attributes in cursive// are not available in the catchem source system
@@ -130,9 +103,8 @@ legend left
 **Additional analytical questions:**
 Do users searching for treasures in their home city find them more often, on average, than users from different locations?
 Do longer (more detailed) descriptions allow users to find treasure quicker, on average?
-Are there particular times of the year when the difficulty level of treasure hunts is consistently higher or lower?
-Do certain types of users show a preference for specific weather conditions when participating in treasure hunts?
-Does the size of the container influence the likelihood of receiving a log?
+Does the amount of rainfall influence the likelihood of finding a treasure?
+Does the size of the container influence the difficulty of found treasures?
 end legend
 
 @enduml
