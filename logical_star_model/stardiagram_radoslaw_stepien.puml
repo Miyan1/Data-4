@@ -12,11 +12,11 @@ class "**TreasureFound_Fact**" as TreasureFound_Fact {
   **KEY SCD ATTRIBUTE**
   FK\t\tTreasureID
   FK\t\tDateID
-  FK\t\tUserSK 
+  FK\t\tUserSK
+  FK\t\tWeatherSK
   //\t\tTotalCachesFound//
   //\t\tDescriptionLength//
   //\t\tSearchTime//
-  //\t\tRainfall//
 }
 
 note right of TreasureFound_Fact
@@ -25,10 +25,10 @@ Attributes:
 TreasureID -> Foreign key to Treasure_Dim
 LogID -> Foreign key to Log_Dim
 UserSK -> Foreign key to User_Dim
+WeatherSK -> Foreign key to Weather_Dim
 SearchTime -> Time spent searching for the treasure
 TotalCachesFound -> Total amount of caches found
 DescriptionLength -> Length of the description for the treasure
-Rainfall -> Amount of rain in mm/m2 when the treasure was found
 end note
 
 class "**Treasure_Dim**" as Treasure_Dim {
@@ -74,7 +74,7 @@ end note
 
 class "**Date_Dim**" as Date_Dim {
   **KEY SCD ATTRIBUTE**
-  PK\t0\tDateID
+  PK\t0\tDateSK
   \t0\tDate
   //\t1\tDayofTheWeek//
   //\t1\tWeek//
@@ -93,9 +93,23 @@ Month -> January, February etc.
 Season -> Winter, Spring etc.
 end note
 
+class "**Weather_Dim**" as Weather_Dim {
+  **KEY SCD ATTRIBUTE**
+  PK\t2\tWeatherSK
+  //\t2\tRainfall//
+}
+
+note right of Weather_Dim
+Weather Dimension
+Attributes:
+WeatherSK -> Surrogate key
+Rainfall -> Amount of rain
+end note
+
 TreasureFound_Fact -up-> Treasure_Dim : "*" "1"
 TreasureFound_Fact -down-> User_Dim : "*" "1"
 TreasureFound_Fact -left-> Date_Dim : "1" "*"
+TreasureFound_Fact -down-> Weather_Dim : "1" "*"
 
 legend left
 //Attributes in cursive// are not available in the catchem source system
