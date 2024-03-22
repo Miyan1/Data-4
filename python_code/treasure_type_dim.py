@@ -1,0 +1,43 @@
+from config import SERVER, DATABASE_OP, DATABASE_DWH, USERNAME, PASSWORD, DRIVER
+import dwh_tools as dwh
+import pyodbc
+
+
+def insert_treasure_types(cursor):
+    cursor.execute('''
+    INSERT INTO TreasureTypeDim (difficulty, terrain, size, visibility)
+SELECT
+    d.difficulty,
+    t.terrain,
+    s.size,
+    v.visibility
+FROM
+    (VALUES (0), (1), (2), (3), (4)) AS d(difficulty)
+    CROSS JOIN (VALUES (0), (1), (2), (3), (4)) AS t(terrain)
+    CROSS JOIN (VALUES (0), (1), (2), (3)) AS s(size)
+    CROSS JOIN (VALUES (0), (1), (2)) AS v(visibility);
+
+    ''')
+    cursor.commit()
+
+
+def main():
+    try:
+        # Establish connections
+        conn_op = dwh.establish_connection(SERVER, DATABASE_OP, USERNAME, PASSWORD, DRIVER)
+        conn_dwh = dwh.establish_connection(SERVER, DATABASE_DWH, USERNAME, PASSWORD, DRIVER)
+
+        # Insert treasure types
+        with conn_dwh.cursor() as cursor_dwh:
+            insert_treasure_types(cursor_dwh)
+
+        # Close connections
+        conn_op.close()
+        conn_dwh.close()
+    except pyodbc.Error as e:
+        print(f"Error connecting to the database: {e}")
+
+
+if __name__ == "__main__":
+    main()
+
