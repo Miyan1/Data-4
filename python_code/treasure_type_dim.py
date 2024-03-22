@@ -3,6 +3,21 @@ import dwh_tools as dwh
 import pyodbc
 
 
+def create_treasure_type_dim(cursor_dwh):
+    cursor_dwh.execute('''
+    IF OBJECT_ID(N'TreasureTypeDim', N'U') IS NULL 
+    CREATE TABLE TreasureTypeDim (
+    id INT PRIMARY KEY IDENTITY(1,1),
+    difficulty INT, 
+    terrain INT,
+    size INT,
+    visibility INT
+    )
+    ''')
+
+    cursor_dwh.commit() 
+
+
 def insert_treasure_types(cursor):
     cursor.execute('''
     INSERT INTO TreasureTypeDim (difficulty, terrain, size, visibility)
@@ -26,9 +41,12 @@ def main():
         # Establish connections
         conn_op = dwh.establish_connection(SERVER, DATABASE_OP, USERNAME, PASSWORD, DRIVER)
         conn_dwh = dwh.establish_connection(SERVER, DATABASE_DWH, USERNAME, PASSWORD, DRIVER)
-
-        # Insert treasure types
+        
         with conn_dwh.cursor() as cursor_dwh:
+            # Creature TreasureTypeDim table if it doesn't exist
+            create_treasure_type_dim(cursor_dwh)
+
+            # Insert treasure types 
             insert_treasure_types(cursor_dwh)
 
         # Close connections
