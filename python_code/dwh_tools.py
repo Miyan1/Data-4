@@ -2,7 +2,7 @@ import config
 import pyodbc
 from config import SERVER, DATABASE_OP, DATABASE_DWH, USERNAME, PASSWORD, DRIVER
 
-def establish_connection(server=SERVER, database=DATABASE_OP, username=USERNAME, password=PASSWORD,driver=DRIVER):
+def establish_connection(server=SERVER, database=DATABASE_OP, username=USERNAME, password=PASSWORD, driver=DRIVER):
     """
     Establishes a connection to the specified SQL Server database.
     Args:
@@ -16,3 +16,7 @@ def establish_connection(server=SERVER, database=DATABASE_OP, username=USERNAME,
     """
     connection_string = f"DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password};TrustServerCertificate=yes"
     return pyodbc.connect(connection_string)
+
+def close_connection(cursor, conn):
+    cursor.close()
+    conn.close()
