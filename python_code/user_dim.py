@@ -4,9 +4,31 @@ import dwh_tools as dwh
 from config import SERVER, DATABASE_OP, DATABASE_DWH, USERNAME, PASSWORD, DRIVER
 
 
+def create_user_dim_table(cursor_dwh):
+    cursor_dwh.execute('''
+    IF OBJECT_ID(N'[dbo].[UserDim]', N'U') IS NULL 
+    CREATE TABLE [dbo].[UserDim] (
+    [UserSK] INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+    [UserID] BINARY(16) NOT NULL,
+    [FirstName] NVARCHAR(255) NULL,
+    [LastName] NVARCHAR(255) NULL,
+    [City] NVARCHAR(255) NULL,
+    [Country] NVARCHAR(255) NULL,
+    [ExperienceLevel] NVARCHAR(50) NULL,
+    [IsDedicator] BIT NULL,
+    [ValidFrom] DATETIME NOT NULL,
+    [EndDate] DATETIME NULL,
+    [IsActive] BIT NOT NULL
+    )
+    ''')
+
+
+    cursor_dwh.commit()
+
+
 def extract_user_data(cursor_op):
     query = """
-    SELECT TOP 200
+    SELECT TOP 1000
     u.id, 
     u.first_name, 
     u.last_name, 
@@ -16,6 +38,7 @@ def extract_user_data(cursor_op):
 FROM dbo.user_table u
 JOIN dbo.city c ON u.city_city_id = c.city_id
 JOIN dbo.country ctr ON c.country_code = ctr.code
+WHERE ctr.name = 'Russian Federation'
     """
     cursor_op.execute(query)
     columns = [column[0] for column in cursor_op.description]
@@ -158,6 +181,13 @@ def load_user_dim(cursor_dwh, experience_changes_df, table_name='UserDim'):
 
 def main():
     try:
+        # Establish connection to DWH
+        conn_dwh = dwh.establish_connection(SERVER, DATABASE_DWH, USERNAME, PASSWORD, DRIVER)
+        cursor_dwh = conn_dwh.cursor()
+
+        # Create UserDim table if it doesn't exist
+        create_user_dim_table(cursor_dwh)
+
         # Extract
         conn_op = dwh.establish_connection(SERVER, DATABASE_OP, USERNAME, PASSWORD, DRIVER)
         cursor_op = conn_op.cursor()
@@ -167,8 +197,6 @@ def main():
         experience_changes_df = transform_user_data(user_data, cursor_op)
 
         # Load
-        conn_dwh = dwh.establish_connection(SERVER, DATABASE_DWH, USERNAME, PASSWORD, DRIVER)
-        cursor_dwh = conn_dwh.cursor()
         load_user_dim(cursor_dwh, experience_changes_df, 'UserDim')
 
         # Close the connections
@@ -179,10 +207,8 @@ def main():
     except pyodbc.Error as e:
         print(f"Error connecting to the database: {e}")
 
-
 if __name__ == "__main__":
     main()
-
 
 
 
