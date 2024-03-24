@@ -15,6 +15,7 @@ def create_treasure_found_fact_table(cursor_dwh):
     SearchTime DECIMAL(10, 2) NOT NULL,
     DescriptionLength INT NOT NULL,
     TotalCachesFound INT NOT NULL,
+    TotalStages INT NOT NULL,
     FOREIGN KEY (TreasureID) REFERENCES TreasureTypeDim(id),
     FOREIGN KEY (WeatherID) REFERENCES Rain_Dim(id),
     FOREIGN KEY (DateSK) REFERENCES Date_Dim(DateSK),
@@ -27,7 +28,7 @@ def create_treasure_found_fact_table(cursor_dwh):
 
 def insert_treasure_found_facts(cursor_dwh):
     cursor_dwh.execute('''
-    INSERT INTO TreasureFound_Fact (TreasureID, WeatherID, DateSK, UserSK, SearchTime, DescriptionLength, TotalCachesFound) 
+    INSERT INTO TreasureFound_Fact (TreasureID, WeatherID, DateSK, UserSK, SearchTime, DescriptionLength, TotalCachesFound, TotalStages) 
     SELECT 
         (SELECT id FROM TreasureTypeDim WHERE difficulty = t.difficulty AND terrain = t.terrain AND size = s.container_size AND visibility = s.visibility),
         CASE 
@@ -39,7 +40,8 @@ def insert_treasure_found_facts(cursor_dwh):
         ud.UserSK,
         DATEDIFF(ss, tl.session_start, tl.log_time),
         LEN(s.description),
-        (SELECT COUNT(*) FROM catchem.dbo.treasure_log tl2 WHERE tl2.log_type = 2 AND tl2.hunter_id = ud.UserID)
+        (SELECT COUNT(*) FROM catchem.dbo.treasure_log tl2 WHERE tl2.log_type = 2 AND tl2.hunter_id = ud.UserID),
+        (s.sequence_number + 1)
     FROM catchem.dbo.treasure_log tl
     JOIN Date_Dim dd ON dd.date = CONVERT(date, tl.log_time)
     JOIN UserDim ud ON ud.UserID = tl.hunter_id

@@ -28,7 +28,7 @@ def create_user_dim_table(cursor_dwh):
 
 def extract_user_data(cursor_op):
     query = """
-    SELECT TOP 1000
+    SELECT
     u.id, 
     u.first_name, 
     u.last_name, 
@@ -38,7 +38,6 @@ def extract_user_data(cursor_op):
 FROM dbo.user_table u
 JOIN dbo.city c ON u.city_city_id = c.city_id
 JOIN dbo.country ctr ON c.country_code = ctr.code
-WHERE ctr.name = 'Russian Federation'
     """
     cursor_op.execute(query)
     columns = [column[0] for column in cursor_op.description]
@@ -73,16 +72,13 @@ def transform_user_data(user_data, cursor_op):
     experience_changes = []
 
     for index, row in user_data.iterrows():
+        print(f"[{index}] Transform next user data")
         user_id = row['id']
         first_name = row['first_name']
         last_name = row['last_name']
         city = row['city_name']
         country = row['Country']
-
-        # Determining dedicator
-        cursor_op.execute("SELECT COUNT(*) FROM dbo.Treasure WHERE owner_id = ?", user_id)
-        treasures_count = cursor_op.fetchone()[0]
-        is_dedicator = treasures_count > 0
+        is_dedicator = row['IsDedicator'] 
 
         cursor_op.execute("""
             SELECT log_time FROM dbo.treasure_log
@@ -134,6 +130,7 @@ def transform_user_data(user_data, cursor_op):
 
 def load_user_dim(cursor_dwh, experience_changes_df, table_name='UserDim'):
     for index, change in experience_changes_df.iterrows():
+        print(f"[{index}] Change experience for next user")
         user_id = change['UserID']
         new_experience_level = change['ExperienceLevel']
         valid_from = change['ValidFrom']
