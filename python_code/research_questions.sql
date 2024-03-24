@@ -28,7 +28,17 @@ GROUP BY
     r.weather;
 
 -- [S2] Are novice users on average looking for caches with more stages?
-
+SELECT
+    UD.ExperienceLevel,
+    AVG(CAST(TFF.TotalStages AS FLOAT)) AS AvgStages
+FROM
+    UserDim AS UD
+JOIN
+    TreasureFound_Fact AS TFF ON UD.UserSK = TFF.UserSK
+WHERE
+    UD.ExperienceLevel = 'Amateur'
+GROUP BY
+    UD.ExperienceLevel;
 
 
 -- [S1] On average, are fewer caches searched in more difficult terrain when it rains?
