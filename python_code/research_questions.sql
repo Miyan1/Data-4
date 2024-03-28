@@ -130,16 +130,20 @@ JOIN
 SELECT
   AVG(TreasureFound_Fact.SearchTime) AS AvgSearchTime,
   CASE 
-    WHEN LEN(TreasureFound_Fact.DescriptionLength) < (choose a value) THEN 'Short'
-    WHEN LEN(TreasureFound_Fact.DescriptionLength) BETWEEN (choose a value) AND (choose a value) THEN 'Medium'
+    WHEN TreasureFound_Fact.DescriptionLength  < 20 THEN 'Short'
+    WHEN TreasureFound_Fact.DescriptionLength BETWEEN 20 AND 40 THEN 'Medium'
     ELSE 'Long'
-  END AS DescriptionLengthCategory
+  END 
 FROM
   TreasureFound_Fact
 JOIN
   TreasureTypeDim ON TreasureFound_Fact.TreasureID = TreasureTypeDim.id
 GROUP BY
-  TreasureFound_Fact.DescriptionLength;
+  CASE 
+    WHEN TreasureFound_Fact.DescriptionLength < 20 THEN 'Short'
+    WHEN TreasureFound_Fact.DescriptionLength BETWEEN 20 AND 40 THEN 'Medium'
+    ELSE 'Long'
+  END;
 
 -- [S2] Does the size of the container influence the difficulty of found treasures?
 SELECT
