@@ -81,17 +81,14 @@ FROM
     UserDim AS UD
 JOIN
     TreasureFound_Fact AS TFF ON UD.UserSK = TFF.UserSK
-WHERE
-    UD.ExperienceLevel = 'Amateur'
 GROUP BY
     UD.ExperienceLevel;
 
 
 -- [S1] On average, are fewer caches searched in more difficult terrain when it rains?
 SELECT
-  AVG(CASE WHEN Rain_Dim.weather = 'Rain' THEN 1 ELSE 0 END) AS AvgSearchesInRain,
-  TreasureTypeDim.terrain,
-  TreasureTypeDim.difficulty
+  AVG(Cast(CASE WHEN Rain_Dim.weather = 'Rain' THEN 1 ELSE 0 END as Float)) AS AvgSearchesInRain,
+  TreasureTypeDim.terrain
 FROM
   TreasureFound_Fact
 JOIN
@@ -99,13 +96,12 @@ JOIN
 JOIN
   Rain_Dim ON TreasureFound_Fact.WeatherID = Rain_Dim.id
 GROUP BY
-  TreasureTypeDim.terrain,
-  TreasureTypeDim.difficulty;
+  TreasureTypeDim.terrain;
 
 -- [S1] Are more difficult caches done on weekends?
 SELECT
   Date_Dim.DayOfTheWeek,
-  AVG(TreasureTypeDim.difficulty) AS AvgDifficulty
+  AVG(CAST(TreasureTypeDim.difficulty as Float)) AS AvgDifficulty
 FROM
   TreasureFound_Fact
 JOIN
@@ -120,7 +116,7 @@ ORDER BY
 -- EXTRA RESEARCH QUESTIONS
 -- [S1] Do treasures with higher difficulty also contain more stages, on average?
 SELECT
-  AVG(TotalStages), TreasureTypeDim.difficulty
+  AVG(CAST(TotalStages as Float)), TreasureTypeDim.difficulty
 FROM
   TreasureFound_Fact
 JOIN
@@ -148,7 +144,7 @@ GROUP BY
 -- [S2] Does the size of the container influence the difficulty of found treasures?
 SELECT
     TTD.size,
-    AVG(TTD.difficulty) as AverageDifficulty
+    AVG(CAST(TTD.difficulty as Float)) as AverageDifficulty
 FROM
     TreasureTypeDim TTD
 JOIN
@@ -162,7 +158,7 @@ SELECT
     RD.weather,
     COUNT(TFF.FactID) as NumberOfFinds
 FROM
-    RainDim RD
+    Rain_Dim RD
 JOIN
     TreasureFound_Fact TFF ON RD.id = TFF.WeatherID
 GROUP BY
