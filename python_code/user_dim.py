@@ -78,7 +78,7 @@ def transform_user_data(user_data, cursor_op):
         last_name = row['last_name']
         city = row['city_name']
         country = row['Country']
-        is_dedicator = row['IsDedicator'] 
+        is_dedicator = row['IsDedicator']
 
         cursor_op.execute("""
             SELECT log_time FROM dbo.treasure_log
@@ -146,22 +146,11 @@ def load_user_dim(cursor_dwh, experience_changes_df, table_name='UserDim'):
 
         # If there's no existing record or the experience level has changed, insert a new record
         if not result or (result and result[1] != new_experience_level):
-            # End-date the previous record if it exists
-            if result:
-                previous_user_sk = result[0]
-                # Calculate the EndDate for the previous record
-                end_date = valid_from
-                cursor_dwh.execute(f"""
-                    UPDATE {table_name} 
-                    SET EndDate = ?, IsActive = 0
-                    WHERE UserSK = ?
-                """, (end_date, previous_user_sk))
-
+            # Check for duplicate records based on all attributes except ValidFrom
             cursor_dwh.execute(f"""
-                INSERT INTO {table_name} (
-                    UserID, FirstName, LastName, City, Country, ExperienceLevel, IsDedicator, ValidFrom, EndDate, IsActive
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 1)
+                SELECT COUNT(*)
+                FROM {table_name}
+                WHERE UserID = ? AND FirstName = ? AND LastName = ? AND City = ? AND Country = ? AND ExperienceLevel = ? AND IsDedicator = ? 
             """, (
                 user_id,
                 change['FirstName'],
@@ -169,11 +158,43 @@ def load_user_dim(cursor_dwh, experience_changes_df, table_name='UserDim'):
                 change['City'],
                 change['Country'],
                 change['ExperienceLevel'],
-                change['IsDedicator'],
-                change['ValidFrom']
+                change['IsDedicator']
             ))
+            duplicate_count = cursor_dwh.fetchone()[0]
+
+            # If no duplicate records found, insert the new record
+            if duplicate_count == 0:
+                # End-date the previous record if it exists
+                if result:
+                    previous_user_sk = result[0]
+                    # Calculate the EndDate for the previous record
+                    end_date = valid_from - pd.Timedelta(milliseconds=1)
+                    cursor_dwh.execute(f"""
+                        UPDATE {table_name} 
+                        SET EndDate = ?, IsActive = 0
+                        WHERE UserSK = ?
+                    """, (end_date, previous_user_sk))
+
+                # Insert the new record
+                cursor_dwh.execute(f"""
+                    INSERT INTO {table_name} (
+                        UserID, FirstName, LastName, City, Country, ExperienceLevel, IsDedicator, ValidFrom, EndDate, IsActive
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 1)
+                """, (
+                    user_id,
+                    change['FirstName'],
+                    change['LastName'],
+                    change['City'],
+                    change['Country'],
+                    change['ExperienceLevel'],
+                    change['IsDedicator'],
+                    change['ValidFrom']
+                ))
 
         cursor_dwh.commit()
+
+
 
 
 def main():
@@ -206,6 +227,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
 
 
 
