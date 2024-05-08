@@ -44,11 +44,11 @@ def insert_treasure_found_facts(cursor_dwh):
         (s.sequence_number + 1)
     FROM catchem.dbo.treasure_log tl
     JOIN Date_Dim dd ON dd.date = CONVERT(date, tl.log_time)
-    JOIN UserDim ud ON ud.UserID = tl.hunter_id
+    JOIN UserDim ud ON ud.UserID = tl.hunter_id AND ((ud.ValidFrom < tl.log_time AND ud.EndDate > tl.log_time) OR (ud.ValidFrom < tl.log_time AND ud.EndDate IS NULL))
     JOIN catchem.dbo.treasure t ON t.id = tl.treasure_id
     JOIN catchem.dbo.treasure_stages ts ON ts.treasure_id = t.id
     JOIN catchem.dbo.stage s ON s.id = ts.stages_id
-    LEFT OUTER JOIN catchem.dbo.weather_history wh ON wh.log_time = DATEADD(hour, DATEDIFF(hour, 0, tl.log_time), 0)
+    LEFT OUTER JOIN catchem.dbo.weather_history wh ON wh.log_time = DATEADD(hour, DATEDIFF(hour, 0, tl.log_time), 0) AND t.city_city_id = wh.city_id
     WHERE tl.log_type = 2 AND s.id = (SELECT TOP 1 id FROM catchem.dbo.treasure_stages ts2 JOIN catchem.dbo.stage s2 ON s2.id = ts2.stages_id WHERE ts2.treasure_id = t.id ORDER BY s2.sequence_number desc); 
     ''')
     cursor_dwh.commit()
