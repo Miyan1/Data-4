@@ -3,11 +3,12 @@ import time
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure
 
-client = MongoClient('172.25.0.7', 27017)
+client = MongoClient('mongodb://172.25.0.7:27017/catchem')
 
-db = client['catchem']
-collection = db['treasure_stages']
-collection.drop()
+db = client.catchem
+collection = db.treasure_stages
+print(collection.count_documents({}))
+print(db.command("dbstats"))
 
 # Read and insert CSV data into MongoDB
 with open('treasure_stages.csv', 'r') as file:
@@ -16,7 +17,8 @@ with open('treasure_stages.csv', 'r') as file:
     csv_reader = csv.DictReader(file, fieldnames=header, delimiter=',')
     for row in csv_reader:
         print(row)
-        collection.insert_one(row)
+        record = collection.insert_one(row)
+        print(record.inserted_id)
 
 # Close the connection
 client.close()
