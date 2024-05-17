@@ -1,0 +1,122 @@
+services:
+  mongors1n1:
+    container_name: mongors1n1
+    image: mongo:5.0.26
+    command: mongod --shardsvr --replSet mongors1 --dbpath /data/db --port 27017
+    ports:
+      - 27017:27017
+    expose:
+      - "27017"
+    environment:
+      TERM: xterm
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/mongo_cluster/data1:/data/db
+    networks:
+      mongo_custom:
+        ipv4_address: 172.25.0.7
+
+  mongors2n1:
+    container_name: mongors2n1
+    image: mongo:5.0.26
+    command: mongod --shardsvr --replSet mongors2 --dbpath /data/db --port 27017
+    ports:
+      - 27027:27017
+    expose:
+      - "27017"
+    environment:
+      TERM: xterm
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/mongo_cluster/data2:/data/db
+    networks:
+      mongo_custom:
+        ipv4_address: 172.25.0.5
+
+  mongors3n1:
+    container_name: mongors3n1
+    image: mongo:5.0.26
+    command: mongod --shardsvr --replSet mongors3 --dbpath /data/db --port 27017
+    ports:
+      - 27037:27017
+    expose:
+      - "27017"
+    environment:
+      TERM: xterm
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/mongo_cluster/data3:/data/db
+    networks:
+      mongo_custom:
+        ipv4_address: 172.25.0.3
+
+  mongocfg1:
+    container_name: mongocfg1
+    image: mongo:5.0.26
+    command: mongod --configsvr --replSet mongors1conf --dbpath /data/db --port 27017
+    environment:
+      TERM: xterm
+    expose:
+      - "27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/mongo_cluster/config1:/data/db
+    networks:
+      mongo_custom:
+        ipv4_address: 172.25.0.2
+
+  mongocfg2:
+    container_name: mongocfg2
+    image: mongo:5.0.26
+    command: mongod --configsvr --replSet mongors1conf --dbpath /data/db --port 27017
+    environment:
+      TERM: xterm
+    expose:
+      - "27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/mongo_cluster/config2:/data/db
+    networks:
+      mongo_custom:
+        ipv4_address: 172.25.0.4
+
+  mongocfg3:
+    container_name: mongocfg3
+    image: mongo:5.0.26
+    command: mongod --configsvr --replSet mongors1conf --dbpath /data/db --port 27017
+    environment:
+      TERM: xterm
+    expose:
+      - "27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/mongo_cluster/config3:/data/db
+    networks:
+      mongo_custom:
+        ipv4_address: 172.25.0.6
+
+  mongos1:
+    container_name: mongos1
+    image: mongo:5.0.26
+    depends_on:
+      - mongocfg1
+      - mongocfg2
+      - mongocfg3
+    command: mongos --configdb mongors1conf/172.25.0.2:27017,172.25.0.4:27017,172.25.0.6:27017 --port 27017
+    ports:
+      - 27019:27017
+    expose:
+      - "27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      mongo_custom:
+        ipv4_address: 172.25.0.8 
+
+networks:
+  mongo_custom:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+          gateway: 172.25.0.1
