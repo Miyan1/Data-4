@@ -21,8 +21,6 @@ def create_user_dim_table(cursor_dwh):
     [IsActive] BIT NOT NULL
     )
     ''')
-
-
     cursor_dwh.commit()
 
 
@@ -35,9 +33,11 @@ def extract_user_data(cursor_op):
     c.city_name,
     ctr.name AS Country, 
     (SELECT COUNT(*) FROM dbo.treasure WHERE owner_id = u.id) AS CacheCount
-FROM dbo.user_table u
-JOIN dbo.city c ON u.city_city_id = c.city_id
-JOIN dbo.country ctr ON c.country_code = ctr.code
+    FROM dbo.user_table u
+    JOIN dbo.city c ON u.city_city_id = c.city_id
+    JOIN dbo.country ctr ON c.country_code = ctr.code
+    WHERE u.first_Name= 'Celine'
+    AND u.last_name= 'Kemmer'
     """
     cursor_op.execute(query)
     columns = [column[0] for column in cursor_op.description]
@@ -46,6 +46,9 @@ JOIN dbo.country ctr ON c.country_code = ctr.code
 
     # Convert the fetched data to a DataFrame
     user_data = pd.DataFrame(data_list, columns=columns)
+
+    # Print the extracted data
+    print(user_data)
 
     # Calculate if user is a dedicator
     user_data['IsDedicator'] = user_data['CacheCount'].apply(lambda x: int(x > 0))
@@ -124,75 +127,106 @@ def transform_user_data(user_data, cursor_op):
             experience_changes[-1]['EndDate'] = None
 
     # Convert the list of dictionaries to a DataFrame
-    experience_changes_df = pd.DataFrame(experience_changes)
-    return experience_changes_df
+    experience_changes = pd.DataFrame(experience_changes)
+    return experience_changes
+
 
 
 def load_user_dim(cursor_dwh, experience_changes_df, table_name='UserDim'):
     for index, change in experience_changes_df.iterrows():
-        print(f"[{index}] Change experience for next user")
+        print(f"[{index}] Change experience for next user: {change}")
         user_id = change['UserID']
         new_experience_level = change['ExperienceLevel']
         valid_from = change['ValidFrom']
+        city = change['City']
+        country = change['Country']
 
-        # Check for the current latest experience level for the user
-        cursor_dwh.execute(f"""
-            SELECT UserSK, ExperienceLevel, ValidFrom
-            FROM {table_name} 
-            WHERE UserID = ? AND IsActive = 1
-            ORDER BY ValidFrom DESC
-        """, (user_id,))
-        result = cursor_dwh.fetchone()
-
-        # If there's no existing record or the experience level has changed, insert a new record
-        if not result or (result and result[1] != new_experience_level):
-            # Check for duplicate records based on all attributes except ValidFrom
+        try:
+            # Check for the current latest experience level for the user
             cursor_dwh.execute(f"""
-                SELECT COUNT(*)
-                FROM {table_name}
-                WHERE UserID = ? AND FirstName = ? AND LastName = ? AND City = ? AND Country = ? AND ExperienceLevel = ? AND IsDedicator = ? 
-            """, (
-                user_id,
-                change['FirstName'],
-                change['LastName'],
-                change['City'],
-                change['Country'],
-                change['ExperienceLevel'],
-                change['IsDedicator']
-            ))
-            duplicate_count = cursor_dwh.fetchone()[0]
+                SELECT UserSK, ExperienceLevel, ValidFrom, City, Country
+                FROM {table_name} 
+                WHERE UserID = ? AND IsActive = 1
+                ORDER BY ValidFrom DESC
+            """, (user_id,))
+            result = cursor_dwh.fetchone()
 
-            # If no duplicate records found, insert the new record
-            if duplicate_count == 0:
-                # End-date the previous record if it exists
-                if result:
-                    previous_user_sk = result[0]
-                    # Calculate the EndDate for the previous record
-                    end_date = valid_from - pd.Timedelta(milliseconds=1)
-                    cursor_dwh.execute(f"""
-                        UPDATE {table_name} 
-                        SET EndDate = ?, IsActive = 0
-                        WHERE UserSK = ?
-                    """, (end_date, previous_user_sk))
-
-                # Insert the new record
+            # If there's no existing record or the experience level or address has changed, insert a new record
+            if not result or (result and (result[1] != new_experience_level or result[3] != city or result[4] != country)):
+                # Check for duplicate records based on all attributes except ValidFrom
                 cursor_dwh.execute(f"""
-                    INSERT INTO {table_name} (
-                        UserID, FirstName, LastName, City, Country, ExperienceLevel, IsDedicator, ValidFrom, EndDate, IsActive
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 1)
+                    SELECT COUNT(*)
+                    FROM {table_name}
+                    WHERE UserID = ? AND FirstName = ? AND LastName = ? AND City = ? AND Country = ? AND ExperienceLevel = ? AND IsDedicator = ? 
                 """, (
                     user_id,
                     change['FirstName'],
                     change['LastName'],
-                    change['City'],
-                    change['Country'],
-                    change['ExperienceLevel'],
-                    change['IsDedicator'],
-                    change['ValidFrom']
+                    city,
+                    country,
+                    new_experience_level,
+                    change['IsDedicator']
                 ))
+                duplicate_count = cursor_dwh.fetchone()[0]
 
-        cursor_dwh.commit()
+                # If no duplicate records found, insert the new record
+                if duplicate_count == 0:
+                    # End-date the previous record if it exists
+                    if result:
+                        previous_user_sk = result[0]
+                        # Calculate the EndDate for the previous record
+                        end_date = valid_from - pd.Timedelta(milliseconds=1)
+                        cursor_dwh.execute(f"""
+                            UPDATE {table_name} 
+                            SET EndDate = ?, IsActive = 0
+                            WHERE UserSK = ?
+                        """, (end_date, previous_user_sk))
+
+                    # Insert the new record
+                    cursor_dwh.execute(f"""
+                        INSERT INTO {table_name} (
+                            UserID, FirstName, LastName, City, Country, ExperienceLevel, IsDedicator, ValidFrom, EndDate, IsActive
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 1)
+                    """, (
+                        user_id,
+                        change['FirstName'],
+                        change['LastName'],
+                        city,
+                        country,
+                        new_experience_level,
+                        change['IsDedicator'],
+                        valid_from
+                    ))
+
+                    print(f"[{index}] Successfully inserted new record for user {user_id}")
+
+            cursor_dwh.commit()
+            print(f"[{index}] Commit successful for user {user_id}")
+
+        except Exception as e:
+            print(f"Error updating/inserting user {user_id}: {e}")
+            cursor_dwh.rollback()
+
+    # Handle the case where city or country is updated without experience level change
+    for index, change in experience_changes_df.iterrows():
+        user_id = change['UserID']
+        city = change['City']
+        country = change['Country']
+
+        try:
+            # Update city and country if the record is active
+            cursor_dwh.execute(f"""
+                UPDATE {table_name}
+                SET City = ?, Country = ?
+                WHERE UserID = ? AND IsActive = 1
+            """, (city, country, user_id))
+            cursor_dwh.commit()
+            print(f"[{index}] Updated city and country for user {user_id}")
+
+        except Exception as e:
+            print(f"Error updating city and country for user {user_id}: {e}")
+            cursor_dwh.rollback()
 
 
 
@@ -227,6 +261,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
