@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/xml.iml" filepath="$PROJECT_DIR$/.idea/xml.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xml_transformations.iml" filepath="$PROJECT_DIR$/xml_transformations.iml" />
     </modules>
   </component>
 </project>

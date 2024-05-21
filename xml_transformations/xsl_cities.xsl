@@ -5,13 +5,19 @@
 
     <xsl:output method="text" encoding="UTF-8"/>
 
+    <!-- Template to process city names -->
     <xsl:template name="processCityName">
         <xsl:param name="text"/>
+        <!-- Check if the city name is not empty -->
         <xsl:if test="string-length($text) > 0">
+            <!-- Remove brackets from the city name -->
             <xsl:variable name="textWithoutBrackets" select="translate($text, '&lt;&gt;', '')"/>
             <xsl:choose>
+                <!-- If the city name starts with a single quote -->
                 <xsl:when test="starts-with($textWithoutBrackets, &quot;'&quot;)">
+                    <!-- Output two single quotes -->
                     <xsl:text>''</xsl:text>
+                    <!-- Recursively call the template with the substring after the first character -->
                     <xsl:call-template name="processCityName">
                         <xsl:with-param name="text" select="substring($textWithoutBrackets, 2)"/>
                     </xsl:call-template>
@@ -28,17 +34,17 @@
 
     <xsl:template match="/">
         <xsl:for-each select="/CountryList/country/city">
-            <xsl:text>INSERT INTO city2 (city_id, city_name, latitude, longitude, postal_code, country_code) VALUES (CAST('' AS XML).value('xs:base64Binary("</xsl:text>
+            <xsl:text>INSERT INTO city2 VALUES ((CAST('' AS XML).value('xs:base64Binary("</xsl:text>
             <xsl:value-of select="translate(./@city_id, '&quot;', '')"/>
-            <xsl:text>")', 'VARBINARY(MAX)'), '</xsl:text>
+            <xsl:text>")', 'VARBINARY(MAX)')), N'</xsl:text>
             <xsl:call-template name="processCityName">
                 <xsl:with-param name="text" select="@ci_name"/>
             </xsl:call-template>
-            <xsl:text>', '</xsl:text>
+            <xsl:text>',</xsl:text>
             <xsl:value-of select="./geo/lat"/>
-            <xsl:text>', '</xsl:text>
+            <xsl:text>,</xsl:text>
             <xsl:value-of select="./geo/long"/>
-            <xsl:text>', '</xsl:text>
+            <xsl:text>, '</xsl:text>
             <xsl:value-of select="./@post"/>
             <xsl:text>', '</xsl:text>
             <xsl:value-of select="../@sc"/>
@@ -47,7 +53,6 @@
         </xsl:for-each>
     </xsl:template>
 </xsl:stylesheet>
-
 
 
 
