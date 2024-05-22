@@ -65,3 +65,36 @@ query = """
 A new row will be added with the user new city and country, but still keep a history of the user's old address (city and country). If you run the script again without changing in the source db, nothing will be updated as duplicate rows aren't allowed. 
 
 The row Valid_From hasn't been implemented to track manual changes, but only to retrieve log_time from treasure_log, so the date will be the same if you don't update the log in the source db.
+
+## mongodb
+
+### Initialize the cluster
+
+```
+docker-compose up -d
+# wait for a minute
+./init_sharding.sh
+```
+
+### Import the data
+
+```
+python3 import.py
+```
+
+### Check sharding status
+
+```
+docker exec -it mongos1 bash -c "echo 'db.printShardingStatus()' | mongo --quiet catchem"
+```
+
+### Get the count of objects in the table
+
+```
+docker exec -it mongos1 bash -c "echo 'db.treasure_stages.count()' | mongo --quiet catchem"
+```
+
+### Query for records from Aland Islands (AX), for city Mariehamn
+```
+docker exec -it mongos1 bash -c "echo 'db[\"treasure_stages\"].find({ country_code: \"AX\", city_name: \"Mariehamn\" })' | mongo --quiet catchem"
+```
